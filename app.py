@@ -434,7 +434,7 @@ def render_sidebar(df):
         st.markdown(
             "<div style='color:rgba(200,197,232,.65);font-size:.72rem;"
             "text-transform:uppercase;letter-spacing:.1em;font-weight:700;"
-            "margin-bottom:10px'>🔍 Dashboard Filters</div>",
+            "margin-bottom:10px'> Dashboard Filters</div>",
             unsafe_allow_html=True,
         )
 
@@ -454,7 +454,7 @@ def render_sidebar(df):
         st.markdown(
             "<div style='color:rgba(200,197,232,.65);font-size:.72rem;"
             "text-transform:uppercase;letter-spacing:.1em;font-weight:700;"
-            "margin:10px 0 6px'>📅 Order Date Range</div>",
+            "margin:10px 0 6px'> Order Date Range</div>",
             unsafe_allow_html=True,
         )
         min_d = df["Order_Date"].min().date()
@@ -509,21 +509,21 @@ def render_kpis(fdf):
         if n > 0 else "—"
     )
 
-    st.markdown("<div class='kpi-label'>📊 Key Performance Indicators</div>", unsafe_allow_html=True)
+    st.markdown("<div class='kpi-label'> Key Performance Indicators</div>", unsafe_allow_html=True)
 
     r1 = st.columns(4)
-    r1[0].metric("🛒 Total Orders",     f"{n:,}")
-    r1[1].metric("💰 Total Revenue",    f"₦{rev:,.0f}")
-    r1[2].metric("🧾 Avg Order Value",  f"₦{aov:,.0f}")
-    r1[3].metric("🏆 Top Category",     top_cat)
+    r1[0].metric(" Total Orders",     f"{n:,}")
+    r1[1].metric(" Total Revenue",    f"₦{rev:,.0f}")
+    r1[2].metric(" Avg Order Value",  f"₦{aov:,.0f}")
+    r1[3].metric(" Top Category",     top_cat)
 
     st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
 
     r2 = st.columns(4)
-    r2[0].metric("✅ Fulfilment Rate",   f"{ful_pct:.1f}%")
-    r2[1].metric("❌ Cancellation Rate", f"{can_pct:.1f}%")
-    r2[2].metric("📦 Total Qty Sold",    f"{qty:,}")
-    r2[3].metric("👥 Unique Customers",  f"{custs:,}")
+    r2[0].metric(" Fulfilment Rate",   f"{ful_pct:.1f}%")
+    r2[1].metric(" Cancellation Rate", f"{can_pct:.1f}%")
+    r2[2].metric(" Total Qty Sold",    f"{qty:,}")
+    r2[3].metric(" Unique Customers",  f"{custs:,}")
 
 
 # =============================================================================
@@ -783,31 +783,31 @@ def render_insights(fdf):
     top_pay   = fdf["Payment_Method"].value_counts().idxmax() if n else "—"
     top_cat   = fdf.groupby("Product_Category")["Total_Value_NGN"].sum().idxmax() if n else "—"
 
-    with st.expander("📋 Executive Insight Summary — Click to expand", expanded=False):
+    with st.expander(" Executive Insight Summary — Click to expand", expanded=False):
         st.markdown(
             f"""
             <div style='font-family:Nunito Sans,sans-serif;color:#C8C5E8;line-height:1.85'>
             <h4 style='color:#FFFFFF;font-family:Nunito,sans-serif;margin-top:0'>
-                🧠 Operational Intelligence Overview
+                 Operational Intelligence Overview
             </h4>
             <p>Filtered view: <strong style="color:#FFFFFF">{n:,} orders</strong>
             &nbsp;·&nbsp; Total Revenue:
             <strong style="color:#FFFFFF">&#x20A6;{rev:,.0f}</strong></p>
             <hr style='border-color:rgba(100,95,170,.3)'>
-            <p>✅ <strong style="color:#FFFFFF">Fulfilment:</strong>
+            <p> <strong style="color:#FFFFFF">Fulfilment:</strong>
             {del_pct:.1f}% delivered.
             {'Strong operational performance.' if del_pct >= 70 else 'Improvement opportunity identified.'}
             Cancellation rate {can_pct:.1f}%
             {'— within acceptable range.' if can_pct <= 15 else '— requires immediate operational review.'}</p>
-            <p>🏆 <strong style="color:#FFFFFF">Category leader:</strong>
+            <p> <strong style="color:#FFFFFF">Category leader:</strong>
             <em>{top_cat}</em> — concentrate inventory investment and marketing budget here.</p>
-            <p>📍 <strong style="color:#FFFFFF">Top state:</strong>
+            <p> <strong style="color:#FFFFFF">Top state:</strong>
             <em>{top_state}</em> — prioritise logistics and warehousing resources in this region.</p>
-            <p>💳 <strong style="color:#FFFFFF">Dominant payment channel:</strong>
+            <p> <strong style="color:#FFFFFF">Dominant payment channel:</strong>
             <em>{top_pay}</em> — expand payment alternatives to reduce conversion friction.</p>
-            <p>📈 <strong style="color:#FFFFFF">Seasonality:</strong>
+            <p> <strong style="color:#FFFFFF">Seasonality:</strong>
             Monitor the Monthly Revenue Trend chart to time stock procurement around demand peaks.</p>
-            <p>⚡ <strong style="color:#FFFFFF">Action:</strong>
+            <p> <strong style="color:#FFFFFF">Action:</strong>
             Operations teams should review the state fulfilment chart daily.
             Finance teams can use the Treemap and grouped bar charts to assess
             category and geographic revenue concentration risk.</p>
