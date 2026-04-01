@@ -15,7 +15,7 @@ st.set_page_config(
     page_title="Subsi | Order Fulfillment Intelligence",
     page_icon="🛒",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded",   # ← sidebar always open on load
 )
 
 # =============================================================================
@@ -90,13 +90,16 @@ def inject_css():
             max-width      : 100%    !important;
         }
 
-        /* ── Sidebar ────────────────────────────────────────────────── */
+        /* ── Sidebar — always visible, never hidden ──────────────────── */
         section[data-testid="stSidebar"] {
-            background: linear-gradient(180deg, #1C1A36 0%, #2C2860 100%) !important;
-            border-right: 1px solid var(--border) !important;
+            background     : linear-gradient(180deg, #1C1A36 0%, #2C2860 100%) !important;
+            border-right   : 1px solid var(--border) !important;
+            min-width      : 260px !important;
+            display        : block !important;
+            visibility     : visible !important;
         }
         section[data-testid="stSidebar"] * {
-            color: var(--white) !important;
+            color      : var(--white) !important;
             font-family: 'Nunito Sans', sans-serif !important;
         }
         section[data-testid="stSidebar"] label {
@@ -108,6 +111,13 @@ def inject_css():
         }
         section[data-testid="stSidebar"] hr {
             border-color: var(--border) !important;
+        }
+
+        /* ── Sidebar toggle button — keep it visible ─────────────────── */
+        [data-testid="collapsedControl"] {
+            display    : flex !important;
+            visibility : visible !important;
+            color      : var(--white) !important;
         }
 
         /* ── Sidebar multiselect tags ───────────────────────────────── */
@@ -298,14 +308,44 @@ def inject_css():
             border-radius : var(--radius) !important;
         }
 
+        /* ── Download button ────────────────────────────────────────── */
+        [data-testid="stDownloadButton"] > button {
+            background    : var(--primary) !important;
+            color         : var(--white) !important;
+            border        : 1px solid var(--primary-light) !important;
+            border-radius : var(--radius-sm) !important;
+            font-weight   : 700 !important;
+            font-family   : 'Nunito Sans', sans-serif !important;
+            font-size     : 0.8rem !important;
+            padding       : 6px 16px !important;
+            transition    : background .2s ease !important;
+        }
+        [data-testid="stDownloadButton"] > button:hover {
+            background : var(--primary-light) !important;
+        }
+
+        /* ── Text input (search box) ────────────────────────────────── */
+        [data-testid="stTextInput"] input {
+            background    : rgba(44,40,96,0.7) !important;
+            border        : 1px solid var(--border) !important;
+            color         : var(--white) !important;
+            border-radius : var(--radius-sm) !important;
+            font-family   : 'Nunito Sans', sans-serif !important;
+        }
+        [data-testid="stTextInput"] label {
+            color      : var(--muted) !important;
+            font-weight: 700 !important;
+            font-size  : 0.78rem !important;
+        }
+
         /* ── Scrollbar ──────────────────────────────────────────────── */
         ::-webkit-scrollbar       { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #1C1A36; }
         ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--primary-light); }
 
-        /* ── Hide Streamlit chrome ──────────────────────────────────── */
-        #MainMenu, footer, header { visibility: hidden !important; }
+        /* ── Hide only Streamlit footer/deploy button, keep header ─── */
+        footer { visibility: hidden !important; }
         .stDeployButton { display: none !important; }
         </style>
         """,
@@ -315,7 +355,7 @@ def inject_css():
 
 # =============================================================================
 # DATA LOADING
-# FIX: use `df[col].dtype == object` — works on pandas 2.x / 3.x
+# Uses df[col].dtype == object — compatible with pandas 2.x and 3.x
 # =============================================================================
 @st.cache_data(show_spinner=False)
 def load_data():
@@ -347,7 +387,8 @@ def load_data():
 
     # Numeric safety
     for col in ["Quantity", "Unit_Price_NGN", "Total_Value_NGN"]:
-        df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
 
     # Revenue contribution %
     total_rev = df["Total_Value_NGN"].sum()
@@ -429,7 +470,21 @@ def render_sidebar(df):
                 unsafe_allow_html=True,
             )
         else:
-            st.markdown("## 🛒 subsi")
+            st.markdown(
+                """
+                <div style="text-align:center;padding:1rem 0;
+                            border-bottom:1px solid rgba(100,95,170,.3);
+                            margin-bottom:1rem">
+                    <div style="font-size:2rem">🛒</div>
+                    <div style="font-size:1.1rem;font-weight:900;color:#FFFFFF;
+                                font-family:Nunito,sans-serif">subsi</div>
+                    <div style="font-size:.62rem;font-weight:700;letter-spacing:2px;
+                                text-transform:uppercase;color:rgba(200,197,232,.6);
+                                margin-top:.3rem">E-Commerce Analytics</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
         st.markdown(
             "<div style='color:rgba(200,197,232,.65);font-size:.72rem;"
@@ -438,13 +493,15 @@ def render_sidebar(df):
             unsafe_allow_html=True,
         )
 
+        # Helper: get unique sorted options for a column
         def opts(col):
             return sorted(df[col].dropna().astype(str).unique().tolist())
 
-        statuses   = opts("Order_Status")
-        payments   = opts("Payment_Method")
-        categories = opts("Product_Category")
-        states     = opts("Delivery_State")
+        # Guard: make sure all expected columns exist
+        statuses   = opts("Order_Status")   if "Order_Status"    in df.columns else []
+        payments   = opts("Payment_Method") if "Payment_Method"  in df.columns else []
+        categories = opts("Product_Category") if "Product_Category" in df.columns else []
+        states     = opts("Delivery_State") if "Delivery_State"  in df.columns else []
 
         sel_status   = st.multiselect("Order Status",     statuses,   default=statuses,   key="fs")
         sel_payment  = st.multiselect("Payment Method",   payments,   default=payments,   key="fp")
@@ -454,15 +511,45 @@ def render_sidebar(df):
         st.markdown(
             "<div style='color:rgba(200,197,232,.65);font-size:.72rem;"
             "text-transform:uppercase;letter-spacing:.1em;font-weight:700;"
-            "margin:10px 0 6px'> Order Date Range</div>",
+            "margin:14px 0 6px'> Order Date Range</div>",
             unsafe_allow_html=True,
         )
-        min_d = df["Order_Date"].min().date()
-        max_d = df["Order_Date"].max().date()
+
+        # Safe date defaults (handle NaT)
+        valid_dates = df["Order_Date"].dropna()
+        if len(valid_dates) > 0:
+            min_d = valid_dates.min().date()
+            max_d = valid_dates.max().date()
+        else:
+            import datetime
+            min_d = datetime.date.today()
+            max_d = datetime.date.today()
+
         date_start = st.date_input("From", value=min_d, min_value=min_d, max_value=max_d, key="ds")
         date_end   = st.date_input("To",   value=max_d, min_value=min_d, max_value=max_d, key="de")
 
         st.markdown("---")
+
+        # Dataset info box in sidebar
+        st.markdown(
+            f"""
+            <div style='background:rgba(64,59,122,.25);border:1px solid rgba(100,95,170,.3);
+                        border-radius:10px;padding:10px 14px;margin-bottom:12px'>
+                <div style='font-size:.68rem;font-weight:700;text-transform:uppercase;
+                            letter-spacing:.1em;color:rgba(200,197,232,.6);margin-bottom:6px'>
+                     Dataset Info
+                </div>
+                <div style='color:#FFFFFF;font-size:.82rem;font-weight:700'>
+                    {len(df):,} total rows
+                </div>
+                <div style='color:rgba(200,197,232,.7);font-size:.76rem;margin-top:3px'>
+                    {len(df.columns)} columns
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
         st.markdown(
             "<div style='color:rgba(200,197,232,.45);font-size:.66rem;"
             "text-align:center;line-height:1.8'>Subsi Intelligence Dashboard<br>"
@@ -503,7 +590,7 @@ def render_kpis(fdf):
     ful_pct = deliv / n * 100 if n else 0
     can_pct = cancel / n * 100 if n else 0
     qty     = int(fdf["Quantity"].sum())
-    custs   = fdf["Customer_ID"].nunique()
+    custs   = fdf["Customer_ID"].nunique() if "Customer_ID" in fdf.columns else 0
     top_cat = (
         fdf.groupby("Product_Category")["Total_Value_NGN"].sum().idxmax()
         if n > 0 else "—"
@@ -642,6 +729,8 @@ def chart_treemap(fdf):
     d = (fdf.groupby(["Product_Category", "Product_Subcategory"])["Total_Value_NGN"]
          .sum().reset_index())
     d.columns = ["Category", "Subcategory", "Revenue"]
+    if d.empty:
+        return None
     fig = px.treemap(
         d, path=["Category", "Subcategory"], values="Revenue",
         color="Revenue",
@@ -695,6 +784,14 @@ def chart_3d(fdf):
 
     fig = go.Figure()
     for status, grp in d.groupby("Order_Status"):
+        # Safely get optional columns for hover
+        hover_cols = []
+        hover_data = []
+        for col in ["Order_ID", "Product_Name", "Delivery_State", "Payment_Method"]:
+            if col in grp.columns:
+                hover_cols.append(col)
+                hover_data.append(grp[col].values)
+
         fig.add_trace(go.Scatter3d(
             x=grp["Date_Ordinal"],
             y=grp["Quantity"],
@@ -707,19 +804,14 @@ def chart_3d(fdf):
                 opacity=0.85,
                 line=dict(width=0.5, color="rgba(255,255,255,.3)"),
             ),
-            customdata=grp[["Order_ID", "Product_Name",
-                            "Delivery_State", "Payment_Method"]].values,
             hovertemplate=(
-                "<b>%{customdata[1]}</b><br>"
-                "Order: %{customdata[0]}<br>"
-                "State: %{customdata[2]}<br>"
-                "Payment: %{customdata[3]}<br>"
+                f"<b>Status: {status}</b><br>"
                 "Qty: %{y}<br>"
                 "Revenue: ₦%{z:,.0f}<extra></extra>"
             ),
         ))
 
-    # FIX: Plotly 5.x — use nested title dict for 3D axes and colorbar
+    # Plotly 5.x — nested title dict for 3D axes
     fig.update_layout(
         title=dict(
             text="3D Intelligence Scatter — Date × Quantity × Revenue",
@@ -769,6 +861,102 @@ def chart_3d(fdf):
         ),
     )
     return fig
+
+
+# =============================================================================
+# SOURCE DATA VIEWER  ← NEW SECTION
+# =============================================================================
+def render_source_data(fdf, df):
+    """
+    Full filtered dataset table with:
+    - Row count summary
+    - Quick text search (filters the displayed rows)
+    - Column selector (show/hide columns)
+    - CSV download button
+    """
+    st.markdown("---")
+    st.markdown(
+        "<div class='section-title'> Source Data — Filtered Records</div>",
+        unsafe_allow_html=True,
+    )
+
+    with st.expander(
+        f" View & Download Filtered Data — {len(fdf):,} rows matched  (click to expand)",
+        expanded=False,
+    ):
+        # ── Controls row ────────────────────────────────────────────────────
+        col_search, col_cols, col_download = st.columns([2, 2, 1])
+
+        with col_search:
+            search_text = st.text_input(
+                " Search any column",
+                placeholder="Type to filter rows…",
+                key="data_search",
+            )
+
+        # Column selector — exclude internal derived columns
+        internal_cols = {"Month_dt", "Date_Ordinal", "Rev_Pct", "Month", "Year"}
+        display_cols  = [c for c in fdf.columns if c not in internal_cols]
+
+        with col_cols:
+            chosen_cols = st.multiselect(
+                " Show columns",
+                options=display_cols,
+                default=display_cols,
+                key="data_cols",
+            )
+
+        # ── Apply text search ────────────────────────────────────────────────
+        display_df = fdf[chosen_cols if chosen_cols else display_cols].copy()
+
+        if search_text.strip():
+            mask = display_df.apply(
+                lambda col: col.astype(str).str.contains(
+                    search_text.strip(), case=False, na=False
+                )
+            ).any(axis=1)
+            display_df = display_df[mask]
+
+        # ── Download button ──────────────────────────────────────────────────
+        csv_bytes = display_df.to_csv(index=False).encode("utf-8")
+        with col_download:
+            st.markdown("<div style='margin-top:26px'></div>", unsafe_allow_html=True)
+            st.download_button(
+                label=" Download CSV",
+                data=csv_bytes,
+                file_name="subsi_filtered_data.csv",
+                mime="text/csv",
+                key="csv_download",
+            )
+
+        # ── Row count info ───────────────────────────────────────────────────
+        st.markdown(
+            f"""
+            <div style='display:flex;gap:20px;margin:8px 0 10px;flex-wrap:wrap'>
+                <span style='background:rgba(64,59,122,.4);border:1px solid rgba(100,95,170,.3);
+                             border-radius:8px;padding:4px 12px;font-size:.78rem;
+                             color:#C8C5E8;font-weight:700'>
+                     Showing {len(display_df):,} of {len(df):,} total rows
+                </span>
+                <span style='background:rgba(64,59,122,.4);border:1px solid rgba(100,95,170,.3);
+                             border-radius:8px;padding:4px 12px;font-size:.78rem;
+                             color:#C8C5E8;font-weight:700'>
+                     {len(chosen_cols if chosen_cols else display_cols)} columns selected
+                </span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        # ── Data table ───────────────────────────────────────────────────────
+        if display_df.empty:
+            st.info("No rows match your search. Try a different keyword.")
+        else:
+            st.dataframe(
+                display_df,
+                use_container_width=True,
+                height=420,
+            )
 
 
 # =============================================================================
@@ -835,7 +1023,7 @@ def section_chart(title, fig):
 def main():
     inject_css()
 
-    # Load data
+    # ── Load data ────────────────────────────────────────────────────────────
     with st.spinner("Loading Subsi dataset…"):
         df, err = load_data()
 
@@ -850,12 +1038,12 @@ def main():
         )
         return
 
-    # Sidebar
+    # ── Sidebar ──────────────────────────────────────────────────────────────
     sel_status, sel_payment, sel_category, sel_state, date_start, date_end = (
         render_sidebar(df)
     )
 
-    # Filter
+    # ── Filter ───────────────────────────────────────────────────────────────
     fdf = apply_filters(df, sel_status, sel_payment, sel_category,
                         sel_state, date_start, date_end)
 
@@ -948,9 +1136,12 @@ def main():
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
+    # ── Source Data Viewer ────────────────────────────────────────────────────
+    render_source_data(fdf, df)
+
     st.markdown("---")
 
-    # ── Executive insights ────────────────────────────────────────────────────
+    # ── Executive Insights ────────────────────────────────────────────────────
     render_insights(fdf)
 
     # ── Footer ────────────────────────────────────────────────────────────────
